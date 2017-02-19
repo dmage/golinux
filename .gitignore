@@ -1,0 +1,6 @@
+/boot
+/initramfs/bin/backdoor
+/initramfs/bin/busybox
+/initramfs/etc/udhcpc/default.script
+/initramfs/lib/libc.so
+/src
