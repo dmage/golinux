@@ -11,10 +11,14 @@ ln -s lib /lib64
 
 mkdir -p /run /var/log /tmp
 
-mkdir /proc /vfat
+mkdir /proc
 mount -t proc none /proc
 mount -t devtmpfs none /dev
-mount -t vfat /dev/vda1 /vfat
+
+if [ -e /dev/vda1 ]; then
+    mkdir /vfat
+    mount -t vfat /dev/vda1 /vfat
+fi
 
 ip link set lo up
 ip link set eth0 up
