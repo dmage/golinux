@@ -22,6 +22,12 @@ define unpack-linux-src
 test -e ./src/linux-$(KERNEL_VERSION) || tar -C ./src -xf ./src/linux-$(KERNEL_VERSION).tar.xz
 endef
 
+INITRAMFS_DYNAMIC_TARGETS=\
+	initramfs/bin/busybox \
+	initramfs/etc/udhcpc/default.script \
+	initramfs/lib/libc.so \
+	initramfs/bin/backdoor
+
 all: build
 
 initramfs/bin/busybox:
@@ -55,8 +61,8 @@ else
 	cd ./backdoor && go build -o ../initramfs/bin/backdoor .
 endif
 
-boot/initrd.img: initramfs/bin/busybox initramfs/etc/udhcpc/default.script initramfs/lib/libc.so initramfs/bin/backdoor
-	@mkdir -p `dirname $@`
+boot/initrd.img: $(INITRAMFS_DYNAMIC_TARGETS) $(shell find ./initramfs)
+	mkdir -p `dirname $@`
 	cd initramfs && find . | cpio -o -H newc | gzip > ../$@
 
 src/linux-$(KERNEL_VERSION).tar.xz:
@@ -87,9 +93,17 @@ else
 	cat ./build/linux/.config >.config
 endif
 
-build: boot/vmlinuz boot/initrd.img
+boot/poweroff.img: src/poweroff.S
+ifeq ($(uname_S),Darwin)
+	$(docker-make)
+else
+	as -c -o ./build/poweroff.o ./src/poweroff.S
+	objcopy -O binary ./build/poweroff.o ./boot/poweroff.img
+endif
 
-run: build
+build: boot/vmlinuz boot/initrd.img boot/poweroff.img
+
+run: boot/vmlinuz boot/initrd.img
 	@mkdir -p ./vfat
 	qemu-system-x86_64 \
 		-kernel ./boot/vmlinuz \
@@ -107,4 +121,4 @@ else
 	-rm -rf ./build
 endif
 
-.PHONY: boot/initrd.img menuconfig build run clean
+.PHONY: menuconfig build run clean
