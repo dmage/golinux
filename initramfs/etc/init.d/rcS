@@ -1,7 +1,23 @@
-#!/bin/sh -efu
-mkdir /vfat
-mount /dev/vda1 /vfat
+#!/bin/busybox sh
+set -efu
+
+busybox mkdir -p /sbin /usr/bin /usr/sbin
+/bin/busybox --install -s
+
+ln -s libc.so /lib/libpthread.so.0
+ln -s libc.so /lib/libc.so.6
+ln -s libc.so /lib/ld-linux-x86-64.so.2
+ln -s lib /lib64
+
+mkdir -p /run /var/log /tmp
+
+mkdir /proc /vfat
+mount -t proc none /proc
+mount -t devtmpfs none /dev
+mount -t vfat /dev/vda1 /vfat
 
 ip link set lo up
 ip link set eth0 up
 start-stop-daemon -S -p /run/udhcpc.eth0.pid -x /bin/sh -b -- -c "exec >/var/log/udhcpc.eth0.log 2>&1; exec udhcpc -i eth0 -s /etc/udhcpc/default.script -f"
+
+echo "Boot time: $(busybox cat /proc/uptime)"
