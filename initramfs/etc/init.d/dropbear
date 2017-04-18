@@ -2,6 +2,7 @@
 
 start() {
 	printf "Starting dropbear: "
+	mkdir -p /etc/dropbear
 	start-stop-daemon -S -q -p /run/dropbear.pid --exec /sbin/dropbear -- -R
 	printf "OK\n"
 }
