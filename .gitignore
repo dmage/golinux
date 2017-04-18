@@ -1,7 +1,11 @@
 /boot
-/initramfs/bin/backdoor
 /initramfs/bin/busybox
 /initramfs/etc/udhcpc/default.script
+/initramfs/lib/ld-musl-x86_64.so.1
 /initramfs/lib/libc.so
+/initramfs/sbin/dropbear
+/opt
+/src/busybox-*
+/src/dropbear-*
 /src/linux-*
 /src/musl-*

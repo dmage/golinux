@@ -1,3 +1,2 @@
 ::sysinit:/etc/init.d/sysinit
 ::respawn:/bin/sh --login
-tty0::respawn:/bin/backdoor

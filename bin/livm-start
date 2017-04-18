@@ -1,0 +1,77 @@
+#!/bin/sh -efu
+
+QEMU=qemu-system-x86_64
+CURL=curl
+SSHPORT=2222
+
+guess_bootdir() {
+	echo "$(dirname "$0")/../boot"
+}
+
+PROGNAME=$(basename "$0")
+: ${BOOTDIR:=$(guess_bootdir)}
+
+usage() {
+	echo "Usage: $0 RUNDIR" >&2
+	exit 1
+}
+
+[ $# -eq 1 ] || usage
+RUNDIR=$1
+
+if [ -e "$RUNDIR" ]; then
+	echo "$PROGNAME: directory $RUNDIR already exists" >&2
+	exit 1
+fi
+
+mkdir -p "$RUNDIR/secrets/root"
+
+ssh-keygen -q -t rsa -N "" -f "$RUNDIR/secrets/root/id_rsa"
+
+nohup $QEMU \
+	-kernel "$BOOTDIR/vmlinuz" \
+	-initrd "$BOOTDIR/initrd.img" \
+	-append "console=ttyS0 quiet" \
+	-drive file=fat:rw:"$RUNDIR/secrets",format=raw,if=virtio \
+	-netdev user,id=net0,hostfwd=tcp:127.0.0.1:$SSHPORT-:22 \
+	-device virtio-net,netdev=net0 \
+	-chardev file,id=char0,path="$RUNDIR/console.log" \
+	-device isa-serial,chardev=char0 \
+	-pidfile "$RUNDIR/qemu.pid" \
+	-display none >"$RUNDIR/stdout.log" &
+PID=$!
+
+READY=0
+for i in 1 2 3 4 5 6 7 8 9 10; do
+	if ! kill -0 $PID 2>/dev/null; then
+		ret=0
+		wait $PID || ret=$?
+		cat "$RUNDIR/stdout.log"
+		echo "$PROGNAME: virtual machine terminated (retcode=$ret)" >&2
+		rm -rf "$RUNDIR"
+		exit 1
+	fi
+	if grep -q "Starting dropbear: OK" "$RUNDIR/console.log" 2>/dev/null; then
+		READY=1
+		break
+	fi
+	sleep 1
+done
+
+if [ $READY -ne 1 ]; then
+	echo "$PROGNAME: timeout while waiting for dropbear" >&2
+	cat "$RUNDIR/console.log" >&2
+	kill "$(cat "$RUNDIR/qemu.pid")"
+	rm -rf "$RUNDIR"
+	exit 1
+fi
+
+echo "$SSHPORT" >"$RUNDIR/sshport.txt"
+cat <<'END' >"$RUNDIR/ssh"
+#!/bin/sh
+vmdir=$(dirname "$0")
+exec ssh -o NoHostAuthenticationForLocalhost=yes -p $(cat "$vmdir/sshport.txt") -i "$vmdir/secrets/root/id_rsa" root@localhost
+END
+chmod +x "$RUNDIR/ssh"
+
+echo "OK!"

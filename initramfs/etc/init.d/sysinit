@@ -14,14 +14,27 @@ mkdir -p /run /var/log /tmp
 mkdir /proc
 mount -t proc none /proc
 mount -t devtmpfs none /dev
+mkdir /dev/pts
+mount -t devpts none /dev/pts
+
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+echo "root:x:0:0:root:/root:/bin/sh" >/etc/passwd
 
 if [ -e /dev/vda1 ]; then
-    mkdir /vfat
-    mount -t vfat /dev/vda1 /vfat
+	mkdir /secrets
+	mount -t vfat -o ro,dmask=277,fmask=377 /dev/vda1 /secrets
+
+	if [ -e /secrets/root/id_rsa.pub ]; then
+		cat /secrets/root/id_rsa.pub >/root/.ssh/authorized_keys
+	fi
 fi
 
 ip link set lo up
 ip link set eth0 up
 start-stop-daemon -S -p /run/udhcpc.eth0.pid -x /bin/sh -b -- -c "exec >/var/log/udhcpc.eth0.log 2>&1; exec udhcpc -i eth0 -s /etc/udhcpc/default.script -f"
+
+/etc/init.d/syslogd start
+/etc/init.d/dropbear start
 
 echo "Boot time: $(busybox cat /proc/uptime)"

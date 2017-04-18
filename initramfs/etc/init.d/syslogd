@@ -1,0 +1,33 @@
+#!/bin/sh
+
+start() {
+	printf "Starting syslogd: "
+	start-stop-daemon -S -q -p /run/syslogd.pid --exec /sbin/syslogd
+	printf "OK\n"
+}
+
+stop() {
+	printf "Stopping syslogd: "
+	start-stop-daemon -K -q -p /run/syslogd.pid
+	printf "OK\n"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+start)
+	start
+	;;
+stop)
+	stop
+	;;
+restart|reload)
+	restart
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac

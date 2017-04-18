@@ -1,0 +1,33 @@
+#!/bin/sh
+
+start() {
+	printf "Starting dropbear: "
+	start-stop-daemon -S -q -p /run/dropbear.pid --exec /sbin/dropbear -- -R
+	printf "OK\n"
+}
+
+stop() {
+	printf "Stopping dropbear: "
+	start-stop-daemon -K -q -p /run/dropbear.pid
+	printf "OK\n"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+start)
+	start
+	;;
+stop)
+	stop
+	;;
+restart|reload)
+	restart
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac

@@ -1,0 +1,28 @@
+#!/bin/sh -efu
+
+QEMU=qemu-system-x86_64
+
+PROGNAME=$(basename "$0")
+
+usage() {
+	echo "Usage: $0 RUNDIR" >&2
+	exit 1
+}
+
+[ $# -eq 1 ] || usage
+RUNDIR=$1
+
+if [ ! -e "$RUNDIR" ]; then
+	echo "$PROGNAME: directory $RUNDIR doesn't exists" >&2
+	exit 1
+fi
+
+PID=$(cat "$RUNDIR/qemu.pid")
+if [ "$(ps -o comm= -p "$PID")" != "$QEMU" ]; then
+	echo "$PROGNAME: no such process ($PID)" >&2
+	exit 1
+fi
+
+kill -- "$PID"
+
+rm -r "$RUNDIR"
